@@ -142,6 +142,10 @@ app.delete("/users/:id", async (req: Request, res: Response) => {
 
         const [userIdAlreadyExist]: TUserDB[] | undefined = await db("users").where({id: idToDelete})
 
+        if(idToDelete[0] !== "f"){
+            res.status(400)
+            throw new Error("'id' deve inicar com a letra 'f'")
+        }
         if(!userIdAlreadyExist){
             res.status(404)
             throw new Error("Id não encontrado")
