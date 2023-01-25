@@ -13,6 +13,11 @@ app.listen(3003, () => {
     console.log(`Servidor rodando na porta ${3003}`)
 })
 
+
+//Regex
+const regexPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,12}$/g
+const regexEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g
+
 app.get("/ping", async (req: Request, res: Response) => {
     try {
         res.status(200).send({ message: "Pong!" })
@@ -34,7 +39,6 @@ app.get("/ping", async (req: Request, res: Response) => {
 app.get("/users", async (req: Request, res: Response) => {
     try {
         const searchTerm = req.query.q as string | undefined
-        console.log(searchTerm)
 
         if(searchTerm === undefined){
             const result = await db("users")
@@ -82,11 +86,11 @@ app.post("/users", async (req: Request, res: Response) => {
             throw new Error("Id tem que ter pelo menos 4 caratcteres.")
         }
 
-        if (!password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,12}$/g)) {
+        if (!password.match(regexPassword)) {
 			throw new Error("'password' deve possuir entre 8 e 12 caracteres, com letras maiúsculas e minúsculas e no mínimo um número e um caractere especial")
 		}
 
-        if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g)) {
+        if (!email.match(regexEmail)) {
             throw new Error("Parâmetro 'email' inválido")
         }
 
@@ -117,6 +121,34 @@ app.post("/users", async (req: Request, res: Response) => {
             user: newUser
         })
 
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
+app.delete("/users/:id", async (req: Request, res: Response) => {
+    try {
+        const idToDelete = req.params.id
+
+        const [userIdAlreadyExist]: TUserDB[] | undefined = await db("users").where({id: idToDelete})
+
+        if(!userIdAlreadyExist){
+            res.status(404)
+            throw new Error("Id não encontrado")
+        }
+
+        await db("users").del().where({id: idToDelete})
+        res.status(200).send({message: "User deletado com sucesso"})
 
     } catch (error) {
         console.log(error)

@@ -4,3 +4,4 @@ export type TUserDB = {
     email: string,
     password: string
 }
+
