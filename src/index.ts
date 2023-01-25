@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import {db} from './database/knex'
 import { idText } from 'typescript'
-import { TUserDB } from './type'
+import { TTasksDB, TUserDB } from './type'
 
 const app = express()
 
@@ -198,3 +198,68 @@ app.get("/tasks", async (req: Request, res: Response) => {
         }
     }
 })
+
+app.post("/tasks", async (req: Request, res: Response) => {
+    try {
+        
+        const {id, title, description} = req.body
+
+        if(id[0] !== "t"){
+            res.status(400)
+            throw new Error("O id deve iniciar com 't'")
+        }
+
+        if(!id || !title || !description){
+            res.status(400)
+            throw new Error("Id, title ou description não informado")
+        }
+
+        if(typeof id !== "string" &&
+        typeof title !== "string" &&
+        typeof description !== "string"){
+            res.status(400)
+            throw new Error("Id, title e description são strings.")
+        }
+
+        if(id.length <= 3){
+            res.status(400)
+            throw new Error("Id tem que ter pelo menos 4 caratcteres.")
+        }
+
+        const [tasksIdAlreadyExist]: TTasksDB[] | undefined = await db("tasks").where({id: id})
+
+        if(tasksIdAlreadyExist){
+            res.status(400)
+            throw new Error("Id já existe.")
+        }
+
+        const newTasks = {
+            id,
+            title,
+            description
+        }
+
+        await db("tasks").insert(newTasks)
+
+        const [insertedTask]: TTasksDB[] = await db("tasks").where({id})
+
+        res.status(201).send({
+            message: "Task criada com sucesso",
+            task: insertedTask
+        })
+
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
