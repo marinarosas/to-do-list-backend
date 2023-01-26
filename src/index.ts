@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import {db} from './database/knex'
 import { idText } from 'typescript'
-import { TTasksDB, TUserDB, TUserTaskDB } from './type'
+import { TTasksDB, TTaskWithUsers, TUserDB, TUserTaskDB } from './type'
 
 const app = express()
 
@@ -490,6 +490,45 @@ app.delete("/tasks/:taskId/users/:userId", async (req: Request, res: Response) =
 
         res.status(200).send({message: "User removido da tarefa com sucesso"})
 
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
+app.get("/tasks/users", async (req: Request, res: Response) => {
+    try {
+
+        const tasks: TTasksDB[] = await db("tasks")
+
+        const result: TTaskWithUsers[] = []
+
+        for (let task of tasks){
+            const responsibles = []
+            const users_tasks: TUserTaskDB[] = await db("users_tasks").where({task_id: task.id} )
+            
+            for(let user_task of users_tasks){
+                const [user]: TUserDB[] = await db("users").where({ id: user_task.user_id})
+                responsibles.push(user)
+            } 
+
+            result.push({
+                ...task,
+                responsibles
+            })
+        }
+
+        res.status(200).send(result)
+        
     } catch (error) {
         console.log(error)
 
