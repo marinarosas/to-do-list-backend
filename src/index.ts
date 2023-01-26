@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import {db} from './database/knex'
 import { idText } from 'typescript'
-import { TTasksDB, TUserDB } from './type'
+import { TTasksDB, TUserDB, TUserTaskDB } from './type'
 
 const app = express()
 
@@ -384,6 +384,61 @@ app.delete("/tasks/:id", async (req: Request, res: Response) => {
         await db("tasks").del().where({id: idToDelete})
         res.status(200).send({message: "User deletado com sucesso"})
 
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
+app.post("/tasks/:taskId/users/:userId", async (req: Request, res: Response) => {
+    try {
+
+        const taskId = req.params.taskId
+        const userId = req.params.userId
+
+        if(taskId[0] !== "t"){
+            res.status(400)
+            throw new Error("O taskId deve iniciar com 't'")
+        }
+
+        if(userId[0] !== "f"){
+            res.status(400)
+            throw new Error("O userId deve iniciar com 't'")
+        }
+
+        const [taskExist]: TTasksDB[] | undefined = await db("tasks").where({id: taskId})
+
+        if(!taskExist){
+            res.status(404)
+            throw new Error("taskId não encontrado")
+        }
+
+        const [userExist]: TTasksDB[] | undefined = await db("users").where({id: userId})
+
+        if(!userExist){
+            res.status(404)
+            throw new Error("userId não encontrado")
+        }
+
+        const newUserTask: TUserTaskDB = {
+            user_id: userId,
+            task_id: taskId
+        }
+
+        await db("users_tasks").insert(newUserTask)
+
+        res.status(200).send("Usuário atribuido à tarefa com sucesso")
+
+        
     } catch (error) {
         console.log(error)
 
